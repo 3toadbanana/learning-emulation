@@ -1,3 +1,2 @@
-char = 0x0fff
-
-print(char)
+char = 0x32f3
+print(list(hex(char)))

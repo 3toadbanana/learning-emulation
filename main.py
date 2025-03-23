@@ -7,8 +7,8 @@ class CPU(pyglet.window.Window):
         self.key_inputs = [0]*16 #16 inputs on a chip-8 keyboard
         self.display_buffer = [0]*32*64 #32x64 pixel screen
         self.memory = [0]*4096  #4kb memory
-        self.gpio = [0]*16 
-        self.sound_timer = 0 
+        self.gpio = [0]*16
+        self.sound_timer = 0
         self.delay_timer = 0
         self.index = 0
         self.op_code = 0
@@ -21,7 +21,11 @@ class CPU(pyglet.window.Window):
         self.funcmap = {0x0000: self._0ZZZ,
                         0x00e0: self.CLS,
                         0x00ee: self.RET,
-        
+                        0x1000: self.JUMP,
+                        0x2000: self.CALL,
+                        0x3000: self.SKIPEQUAL,
+                        0X4000: self.SKIPUNEQUAL,
+
         }
 
 
@@ -44,7 +48,29 @@ class CPU(pyglet.window.Window):
     def RET(self):
         self.pc = self.stack.pop()
 
+    def JUMP(self):
+        self.pc = self.op_code & 0x0fff
 
+    def CALL(self):
+        self.stack.pop()
+        self.stack.append(self.pc)
+        self.pc = self.op_code & 0x0fff
+
+    def SKIPEQUAL(self):
+        op_code_checker = self.op_code & 0x00ff
+        register_checker = list(hex(self.op_code))[3]
+        
+        if self.gpio[op_code_checker] == register_checker:
+            self.pc + 2
+    
+    def SKIPUNEQUAL(self):
+        op_code_checker = self.op_code & 0x00ff
+        register_checker = list(hex(self.op_code))[3]
+        
+        if self.gpio[op_code_checker] != register_checker:
+            self.pc + 2
+    
+    
     def load_rom(self, rom_path):
         # log("Loading %s..." % rom_path)
         binary = open(rom_path, "rb").read()
@@ -102,3 +128,6 @@ class CPU(pyglet.window.Window):
             self.cycle()
             self.draw()
     
+cpu = CPU()
+
+cpu.main()
