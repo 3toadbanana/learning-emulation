@@ -188,7 +188,7 @@ class CPU(pyglet.window.Window):
         self.gpio[vx] = op_code_checker & rand
 
     def DRAWVXVY(self): #0xDxyn
-
+        pass
     def load_rom(self, rom_path):
         # log("Loading %s..." % rom_path)
         binary = open(rom_path, "rb").read()
