@@ -1,2 +1,4 @@
-char = 0x32f3
-print(list(hex(char)))
+char = 0x0002
+print(char)
+char = char & 1
+print(char)

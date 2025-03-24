@@ -25,8 +25,21 @@ class CPU(pyglet.window.Window):
                         0x2000: self.CALL,
                         0x3000: self.SKIPEQUAL,
                         0X4000: self.SKIPUNEQUAL,
+                        0x5000: self.SKIPREGISTEREQUAL,
+                        0x6000: self.SETREGISTER,
+                        0x7000: self.ADDTOREGISTER,
+                        0x8000: self.which8func, #not sure how to prevent conflict with 8xy0
+                        0x8000: self.SETVXVY,
+                        0x8001: self.SETVXORVY,
+                        0x8002: self.SETVXANDVY,
+                        0x8003: self.SETVXXORVY,
+                        0x8004: self.ADDVXVY,
+                        0x8005: self.SUBVXVY,
+                        0x8006: self.SHIFTRIGHTVX,
+                        0x8007: self.SUBNVXVY,
+                        0x800E: self.SHIFTLEFTVX,
 
-        }
+        }   
 
 
         i = 0
@@ -48,29 +61,91 @@ class CPU(pyglet.window.Window):
     def RET(self):
         self.pc = self.stack.pop()
 
-    def JUMP(self):
+    def JUMP(self): #0x1000
         self.pc = self.op_code & 0x0fff
 
-    def CALL(self):
+    def CALL(self): #0x2000
         self.stack.pop()
         self.stack.append(self.pc)
         self.pc = self.op_code & 0x0fff
 
-    def SKIPEQUAL(self):
+    def SKIPEQUAL(self): #0x3000
         op_code_checker = self.op_code & 0x00ff
         register_checker = list(hex(self.op_code))[3]
         
-        if self.gpio[op_code_checker] == register_checker:
+        if self.gpio[register_checker] == op_code_checker:
             self.pc + 2
     
-    def SKIPUNEQUAL(self):
+    def SKIPUNEQUAL(self): #0x4000
         op_code_checker = self.op_code & 0x00ff
         register_checker = list(hex(self.op_code))[3]
         
-        if self.gpio[op_code_checker] != register_checker:
+        if self.gpio[register_checker] != op_code_checker:
             self.pc + 2
-    
-    
+
+    def SKIPREGISTEREQUAL(self): #0x5000
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        if vx == vy:
+            self.pc + 2
+
+    def SETREGISTER(self): #0x6000
+        op_code_checker = self.op_code & 0x00ff
+        vx = list(hex(self.op_code))[3]
+        self.gpio[vx] = op_code_checker
+
+    def ADDTOREGISTER(self): #0x7000
+        op_code_checker = self.op_code & 0x00ff
+        vx = list(hex(self.op_code))[3]
+        self.gpio[vx] += op_code_checker
+
+    def SETVXVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        self.gpio[vx] = self.gpio[vy]
+
+    def SETVXORVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        vx_or_vy = self.gpio[vx] | self.gpio[vy]
+        self.gpio[vx] = vx_or_vy
+
+    def SETVXANDVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        vx_and_vy = self.gpio[vx] & self.gpio[vy]
+        self.gpio[vx] = vx_and_vy
+
+    def SETVXXORVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        vx_xor_vy = self.gpio[vx] ^ self.gpio[vy]
+        self.gpio[vx] = vx_xor_vy
+
+    def ADDVXVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        sum = self.gpio[vx] + self.gpio[vy]
+        if sum > 255:
+            self.gpio[15] = 1
+        else:
+            self.gpio[15] = 0
+        self.gpio[vx] = sum & 0xff
+
+    def SUBVXVY(self):
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        difference = self.gpio[vx] - self.gpio[vy]
+        if difference > 0:
+            self.gpio[15] = 1
+        else:
+            self.gpio[15] = 0
+        self.gpio[vx] = difference
+
+    def SHIFTRIGHTVX(self): #dubious
+        vx = list(hex(self.op_code))[3]
+        self.gpio[vx] = self.gpio[vx] >> 1
+
     def load_rom(self, rom_path):
         # log("Loading %s..." % rom_path)
         binary = open(rom_path, "rb").read()
