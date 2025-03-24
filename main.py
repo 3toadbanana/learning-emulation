@@ -1,5 +1,6 @@
 import pyglet
 import sys
+import random
 
 class CPU(pyglet.window.Window):
     def initialise(self):
@@ -38,6 +39,11 @@ class CPU(pyglet.window.Window):
                         0x8006: self.SHIFTRIGHTVX,
                         0x8007: self.SUBNVXVY,
                         0x800E: self.SHIFTLEFTVX,
+                        0x9000: self.SKIPREGISTERUNEQUAL,
+                        0xA000: self.SETINDEX,
+                        0xB000: self.JUMPV0,
+                        0xC000: self.VXANDRAND,
+                        0xD000: self.DRAWVXVY
 
         }   
 
@@ -61,40 +67,40 @@ class CPU(pyglet.window.Window):
     def RET(self):
         self.pc = self.stack.pop()
 
-    def JUMP(self): #0x1000
+    def JUMP(self): #0x1nnn
         self.pc = self.op_code & 0x0fff
 
-    def CALL(self): #0x2000
+    def CALL(self): #0x2nnn
         self.stack.pop()
         self.stack.append(self.pc)
         self.pc = self.op_code & 0x0fff
 
-    def SKIPEQUAL(self): #0x3000
+    def SKIPEQUAL(self): #0x3xkk
         op_code_checker = self.op_code & 0x00ff
         register_checker = list(hex(self.op_code))[3]
         
         if self.gpio[register_checker] == op_code_checker:
             self.pc + 2
     
-    def SKIPUNEQUAL(self): #0x4000
+    def SKIPUNEQUAL(self): #0x4xkk
         op_code_checker = self.op_code & 0x00ff
         register_checker = list(hex(self.op_code))[3]
         
         if self.gpio[register_checker] != op_code_checker:
             self.pc + 2
 
-    def SKIPREGISTEREQUAL(self): #0x5000
+    def SKIPREGISTEREQUAL(self): #0x5xy0
         vx = list(hex(self.op_code))[3]
         vy = list(hex(self.op_code))[4]
-        if vx == vy:
+        if self.gpio[vx] == self.gpio[vy]:
             self.pc + 2
 
-    def SETREGISTER(self): #0x6000
+    def SETREGISTER(self): #0x6xkk
         op_code_checker = self.op_code & 0x00ff
         vx = list(hex(self.op_code))[3]
         self.gpio[vx] = op_code_checker
 
-    def ADDTOREGISTER(self): #0x7000
+    def ADDTOREGISTER(self): #0x7xkk
         op_code_checker = self.op_code & 0x00ff
         vx = list(hex(self.op_code))[3]
         self.gpio[vx] += op_code_checker
@@ -142,9 +148,46 @@ class CPU(pyglet.window.Window):
             self.gpio[15] = 0
         self.gpio[vx] = difference
 
+    def SUBNVXVY(self): #dubious
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        difference = self.gpio[vy] - self.gpio[vx]
+        if difference > 0:
+            self.gpio[15] = 1
+        else:
+            self.gpio[15] = 0
+        self.gpio[vx] = difference
+
     def SHIFTRIGHTVX(self): #dubious
         vx = list(hex(self.op_code))[3]
         self.gpio[vx] = self.gpio[vx] >> 1
+        # TODO MORE
+
+    def SHIFTLEFTVX(self): #dubious
+        vx = list(hex(self.op_code))[3]
+        self.gpio[vx] = self.gpio[vx] >> 1
+        # TODO MORE
+
+    def SKIPREGISTERUNEQUAL(self): #0x9xy0
+        vx = list(hex(self.op_code))[3]
+        vy = list(hex(self.op_code))[4]
+        if self.gpio[vx] != self.gpio[vy]:
+            self.pc + 2
+
+    def SETINDEX(self): #0xAnnn
+        self.index = self.op_code & 0x0fff
+
+    def JUMPV0(self): #0xBnnn
+        sum = self.op_code & 0x0fff
+        self.pc = sum + self.gpio[0]
+
+    def VXANDRAND(self): #0xCxkk
+        op_code_checker = self.op_code & 0x00ff
+        vx = list(hex(self.op_code))[3]
+        rand = random.randint(0, 255)
+        self.gpio[vx] = op_code_checker & rand
+
+    def DRAWVXVY(self): #0xDxyn
 
     def load_rom(self, rom_path):
         # log("Loading %s..." % rom_path)
